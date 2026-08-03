@@ -1,0 +1,14 @@
+,value
+source_rows,32880
+current_rows,32880
+invalid_dates,0
+missing_cells_in_original_columns,0
+duplicate_primary_keys,0
+invalid_site_ids,0
+invalid_cement_types,0
+silo_capacity_reference_mismatches,0
+negative_values,0
+inventory_balance_failures,0
+inventory_continuity_failures,0
+missing_site_dates,0
+capacity_violations_retained,11504
