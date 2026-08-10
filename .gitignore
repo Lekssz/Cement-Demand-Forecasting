@@ -6,3 +6,7 @@ __pycache__/
 .ipynb_checkpoints/
 venv/
 work/
+site_by_site/
+mlruns/
+mlflow.db
+notebooks\mlflow.db
