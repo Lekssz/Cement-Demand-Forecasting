@@ -1,5 +1,5 @@
 import pandas as pd
-
+from arima_model import run_arima_experiment
 
 # ---------------------------------------------------------
 # 1. LOAD CLEANED DATA
@@ -233,6 +233,37 @@ site_performance_df = pd.DataFrame(site_performance)
 print("\nBaseline Performance by Site:")
 print(
     site_performance_df
+    .sort_values("MAPE")
+    .to_string(index=False)
+)
+
+# ---------------------------------------------------------
+# RUN ARIMA EXPERIMENT
+# ---------------------------------------------------------
+
+(
+    arima_df,
+    arima_mae,
+    arima_rmse,
+    arima_mape,
+    arima_site_df
+
+) = run_arima_experiment(
+    weekly_df=weekly_df,
+    forecast_horizon=8,
+    order=(1, 1, 1)
+)
+
+
+print("\nARIMA Performance:")
+print(f"MAE:  {arima_mae:.2f} tonnes")
+print(f"RMSE: {arima_rmse:.2f} tonnes")
+print(f"MAPE: {arima_mape:.2f}%")
+
+
+print("\nARIMA Performance by Site:")
+print(
+    arima_site_df
     .sort_values("MAPE")
     .to_string(index=False)
 )

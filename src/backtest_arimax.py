@@ -21,6 +21,7 @@ from arimax import (
 # Keep exactly the same model settings used in the
 # successful ARIMAX experiment.
 FORECAST_HORIZON = 8
+#ARIMA_ORDER = (1, 1, 1)
 ARIMA_ORDER = (0, 1, 1)
 
 # Test the model across five different historical
