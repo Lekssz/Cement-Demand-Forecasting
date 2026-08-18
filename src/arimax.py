@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 FORECAST_HORIZON = 8
 ARIMA_ORDER = (1, 1, 1)
 
-
+#ARIMA_ORDER = (0, 1, 1) #changed after optimisation
 # ---------------------------------------------------------
 # FILE PATH
 # ---------------------------------------------------------
