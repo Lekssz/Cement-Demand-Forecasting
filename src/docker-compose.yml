@@ -1,0 +1,70 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.15.1
+    container_name: cement_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../mlflow:/mlflow
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow/mlflow.db --default-artifact-root file:///mlflow/artifacts
+    networks:
+      - cement-net
+    restart: unless-stopped
+
+  model:
+    build:
+      context: .
+      dockerfile: Dockerfile.model
+    container_name: cement_model
+    depends_on:
+      - mlflow
+    volumes:
+      - ../models:/app/models
+      - ../data:/app/data
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXPERIMENT=cement_demand_forecasting
+    networks:
+      - cement-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: cement_api
+    depends_on:
+      - model
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models:/app/models:ro
+      - ../data:/app/data:ro
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - API_PORT=8000
+    restart: unless-stopped
+    networks:
+      - cement-net
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: cement_streamlit
+    depends_on:
+      - api
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+      - API_URL=http://api:8000
+    restart: unless-stopped
+    networks:
+      - cement-net
+
+networks:
+  cement-net:
+    driver: bridge
