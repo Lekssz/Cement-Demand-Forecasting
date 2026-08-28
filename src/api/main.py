@@ -4,6 +4,7 @@ FastAPI service for cement demand forecasting inference.
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
+from src.api.arimax_routes import router as arimax_router
 
 import numpy as np
 import pandas as pd
@@ -28,10 +29,11 @@ logger = get_logger(__name__)
 
 app = FastAPI(
     title="Cement Demand Forecasting API",
-    description="Predict 8-week cement demand per site using a Random Forest model.",
-    version="1.0.0",
+    description=(
+        "Cement demand forecasting API with Random Forest and ARIMAX models, "
+        "including inventory reorder recommendations."
+    ),
 )
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,6 +41,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(arimax_router)
 
 service: Optional[ForecastService] = None
 

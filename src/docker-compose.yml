@@ -64,7 +64,28 @@ services:
     restart: unless-stopped
     networks:
       - cement-net
+  dash:
+    build:
+      context: .
+      dockerfile: Dockerfile.dash
+    container_name: cement_dash
 
+    depends_on:
+      api:
+        condition: service_healthy
+
+    ports:
+      - "8050:8050"
+
+    environment:
+      - PYTHONPATH=/app
+      - API_URL=http://api:8000
+      - DASH_PORT=8050
+
+    restart: unless-stopped
+
+    networks:
+      - cement-net
 networks:
   cement-net:
     driver: bridge
