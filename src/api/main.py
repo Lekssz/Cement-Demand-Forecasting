@@ -5,6 +5,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 from src.api.arimax_routes import router as arimax_router
+from src.api.model_evaluation_routes import (
+    router as model_evaluation_router,
+)
 
 import numpy as np
 import pandas as pd
@@ -42,7 +45,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(arimax_router)
-
+app.include_router(model_evaluation_router)
 service: Optional[ForecastService] = None
 
 
