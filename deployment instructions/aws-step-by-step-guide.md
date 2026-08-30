@@ -1,35 +1,108 @@
-# Here's a step-by-step guide to creating a new AWS account
+# AWS Account Setup Guide
 
-### 1. Go to the AWS Sign-Up Page
-Visit `aws.amazon.com` and click "Create an AWS Account" (usually top-right corner).
+This guide covers the initial AWS account setup required before deploying the Cement Demand Forecasting application.
 
-### 2. Enter Your Root Email and Account Name
-Provide an email address you'll use to sign in (this becomes your root user email).
-Choose an AWS account name (can be your name or a company name — you can change this later).
-Verify the email via a one-time code sent to your inbox.
+## 1. Create an AWS Account
 
-### 3. Set a Root Password
-Create a strong password for the root user. This account has unrestricted access to everything, so use a strong, unique password (and set up MFA later — see step 8).
+Go to the AWS website and select **Create an AWS Account**.
 
-### 4. Enter Contact Information
-Choose Personal or Business account type.
-Fill in your name/company name, phone number, and address.
-Agree to the AWS Customer Agreement.
+Provide:
 
-### 5. Enter Payment Information
-Add a valid credit or debit card.
-AWS may place a small temporary authorization charge (typically refunded) to verify the card.
-Note: many services have a free tier, but a card is still required.
+- A valid email address
+- An AWS account name
+- A strong root-user password
 
-### 6. Verify Your Identity
-AWS will call or text you a verification code.
-Enter the code on the website to confirm you're a real person.
+Verify the email address using the verification code sent by AWS.
 
-### 7. Choose a Support Plan
-Select Basic (Free) unless you need paid support (Developer, Business, or Enterprise tiers).
+## 2. Enter Contact and Payment Information
 
-### 8. Set Up Billing Alerts (Recommended)
-Go to Billing Preferences and enable alerts for when charges exceed a threshold you set — this helps avoid surprise bills.
+Choose either a **Personal** or **Business** account depending on the intended use.
 
-### Start Using AWS
-You're now ready to launch services (EC2, S3, Lambda, etc.) from the AWS Management Console.
+Provide the required:
+
+- Name
+- Address
+- Phone number
+- Payment card details
+
+AWS requires a valid payment method even when using services that may qualify for Free Tier benefits or account credits.
+
+## 3. Verify Your Identity
+
+Complete the AWS identity verification process using the phone number provided during registration.
+
+Follow the verification instructions shown by AWS.
+
+## 4. Select a Support Plan
+
+For development and testing, the **Basic Support Plan** is sufficient.
+
+Paid support plans are not required for this project.
+
+## 5. Sign In to the AWS Management Console
+
+After account creation is complete, sign in to the AWS Management Console.
+
+For this project, the deployment was created in:
+
+- **Region:** Europe (London)
+- **Region code:** `eu-west-2`
+
+Keeping the resources in one region makes the deployment easier to manage.
+
+## 6. Secure the Root Account with MFA
+
+Multi-Factor Authentication (MFA) should be enabled for the AWS root account.
+
+From the AWS Console:
+
+1. Open **Security Credentials**
+2. Locate **Multi-Factor Authentication (MFA)**
+3. Select **Assign MFA device**
+4. Configure either a passkey, authenticator application, or another supported MFA method
+
+For the project account, the MFA device can be given a descriptive name such as:
+
+`amdari-mig`
+
+The root account should only be used for account-level administration.
+
+## 7. Configure Billing and Cost Monitoring
+
+AWS resources can generate charges while they are running, so a budget should be configured before or shortly after deployment.
+
+Go to:
+
+**Billing and Cost Management → Budgets → Create Budget**
+
+For a temporary test deployment, an example configuration is:
+
+- **Budget type:** Cost budget
+- **Period:** Monthly
+- **Budget name:** `mig-test-budget`
+- **Budget amount:** `$5`
+
+An alert can be configured when actual spending reaches approximately:
+
+- **80% of the budget**
+- **100% of the budget**
+
+The notification email should be an address that is checked regularly.
+
+A budget alert provides a warning but does not automatically stop AWS resources.
+
+## 8. Prepare for EC2 Deployment
+
+After the AWS account has been created and secured, the next stage is to create an EC2 instance that will host the Cement Demand Forecasting application.
+
+The EC2 deployment process is documented separately in:
+
+`launch-instance.md`
+
+The server configuration and application deployment are documented in:
+
+`deploy-to-server.md`
+
+Nginx configuration is documented in:
+
+`setting-up-nginx.md`

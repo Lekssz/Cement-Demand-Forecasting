@@ -1,14 +1,21 @@
-# Provision the EC2 instance
-## Via AWS Console:
+# Provision the EC2 Instance
 
-- Go to EC2 → Instances → Launch Instance
-- Name your instance (e.g. api-server)
-- Choose an AMI — Ubuntu 22.04 LTS or Amazon Linux 2023 are good defaults
-- Choose instance type — t3.micro (free-tier eligible) or t3.small for more headroom
-- Create/select a key pair (.pem file) — download it, you need it for SSH
-- Configure Network settings:
-    Allow SSH (port 22) from "My IP" (not 0.0.0.0/0, for security)
-    Allow HTTP (80) from anywhere
+## Via AWS Console
 
-- Configure storage - leave at default
-- Click Launch Instance
+- Go to **EC2 → Instances → Launch Instance**
+- Name the instance: `mig-cement-forecasting`
+- Select **Ubuntu Server 24.04 LTS (64-bit x86)**
+- Choose `t3.small` for the test deployment
+- Create/select a `.pem` key pair, e.g. `mig-cement-key`
+- Configure inbound rules:
+  - SSH (22) → **My IP**
+  - HTTP (80) → **Anywhere**
+- Configure storage: **20 GiB gp3**
+- Launch the instance and wait for **2/2 status checks passed**
+- Copy the **Public IPv4 address**
+
+## Connect with SSH
+
+```bash
+chmod 400 mig-cement-key.pem
+ssh -i mig-cement-key.pem ubuntu@YOUR_PUBLIC_IP

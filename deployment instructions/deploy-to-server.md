@@ -1,44 +1,83 @@
-# Login to your server using SSH
-`ssh -i your-key.pem ubuntu@your-public-ip`
+# Deploy to Server
 
-# Set up the Server Environment
+## 1. Connect to EC2
 
-### Update packages
-`sudo apt update && sudo apt upgrade -y`
+```bash
+ssh -i your-key.pem ubuntu@YOUR_PUBLIC_IP
+```
 
-### Install prerequisites
-`sudo apt install -y ca-certificates curl gnupg`
+## 2. Update the Server
 
-### Add Docker's official GPG key
-`sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg`
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y ca-certificates curl gnupg
+```
 
-### Add the Docker repository
-`echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null`
+## 3. Install Docker
 
-### Install Docker and Docker Compose
-`sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin`
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
 
-### Let ubuntu user run docker without sudo (optional - you can go ahead with including sudo)
-`sudo usermod -aG docker $USER
-newgrp docker   # or log out/in to apply the group change`
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc
 
-### Verify
-`docker --version
-docker compose version
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+```
 
-# Full Deployment Steps
+Add Docker repository:
 
-- Step 1: Clone your Project from Github.
-- Step 2: cd into project path.
-- Step 3: Run docker build (sudo docker build -t ride-wise-project .)
-- Step 4: Start up Docker Container (sudo docker run -d -p 8000:8000 ride-wise-project)
-- Step 5: Set up nginx - refer to setting-up-nginx.md for the steps
+```bash
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+```
 
-### Investigate Logs incase of any error
-docker logs ride-wise
+Install Docker:
+
+```bash
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Allow Docker without sudo:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+## 4. Clone and Run the Project
+
+```bash
+git clone https://github.com/Lekssz/Cement-Demand-Forecasting.git
+cd Cement-Demand-Forecasting/src
+docker compose build
+docker compose up -d
+```
+
+Check services:
+
+```bash
+docker compose ps -a
+```
+
+## 5. Verify
+
+```bash
+curl http://localhost:8000/health
+curl -I http://localhost:8050
+```
+
+If successful, continue with `setting-up-nginx.md`.
+
+## 6. Check Logs if Needed
+
+```bash
+docker compose logs
+```
