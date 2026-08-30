@@ -1,262 +1,302 @@
-# Cement Demand Forecasting — Deployment System
+# MIG Cement Demand Forecasting — Deployment System
 
-This directory contains the production-ready deployment stack for the cement demand forecasting model.
+This directory contains the deployment stack for the MIG Cement Demand Forecasting application.
+
+The system combines ARIMAX demand forecasting, Random Forest benchmarking, inventory recommendations, FastAPI, Plotly Dash, MLflow, and Docker Compose.
 
 ## Architecture
 
+```text
+Historical Data + Planned Pours
+            ↓
+      Forecast Models
+      ├── ARIMAX
+      └── Random Forest
+            ↓
+          FastAPI
+       ↙           ↘
+ Forecasting     Model Evaluation
+      ↓
+Inventory Recommendation
+      ↓
+   Plotly Dash
+
+Random Forest Training
+         ↓
+       MLflow
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Model     │────▶│    API      │◀───▶│  Streamlit  │
-│  Training   │     │  (FastAPI)  │     │  Dashboard  │
-└─────────────┘     └─────────────┘     └─────────────┘
-       │                   │                   │
-       ▼                   ▼                   ▼
-   MLflow              Model Artifact      User Interface
-   Tracking            (joblib .pkl)       (port 8501)
-   (port 5000)         (port 8000)
-```
+
+ARIMAX(0,1,1) is the selected production forecasting model.
+
+Random Forest is retained as a benchmark model.
 
 ## Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **mlflow** | 5000 | Experiment tracking UI & model registry |
-| **model** | — | Training job (runs once, exits) |
-| **api** | 8000 | FastAPI inference service (`/forecast`, `/health`, `/sites`) |
-| **streamlit** | 8501 | Interactive dashboard calling the API |
+| **mlflow** | 5001 locally | Experiment tracking |
+| **model** | — | Random Forest training job |
+| **api** | 8000 | Forecasting, inventory and evaluation API |
+| **dash** | 8050 | Main Plotly Dash dashboard |
+| **streamlit** | 8501 | Original Streamlit dashboard |
 
 ## Quick Start (Docker Compose)
 
 ### Prerequisites
-- Docker & Docker Compose installed
-- Data files in `../data/processed/operations_cleaned.csv`
+
+- Docker and Docker Compose
+- Processed data at `../data/processed/operations_cleaned.csv`
+- Model evaluation reports under `../reports/`
 
 ### 1. Start MLflow tracking server
+
 ```bash
 cd src
 docker compose up -d mlflow
 ```
-Wait for MLflow to be ready: http://localhost:5000
+
+MLflow is available locally at:
+
+```text
+http://localhost:5001
+```
 
 ### 2. Train the model
+
 ```bash
 docker compose run --rm model
 ```
-This will:
-- Load data from `../data/processed/operations_cleaned.csv`
-- Build weekly features (lags, rolling means, multi-step targets)
-- Train Random Forest with time-aware split
-- Log params/metrics/model to MLflow
-- Save artifact to `../models/cement_demand_rf.pkl`
+
+This runs the existing Random Forest training pipeline and saves the model artifact under `../models/`.
 
 ### 3. Start API + Dashboard
+
 ```bash
-docker compose up -d api streamlit
+docker compose up -d api dash
+```
+
+Check container status:
+
+```bash
+docker compose ps
 ```
 
 ### 4. Access services
-- **Dashboard**: http://localhost:8501
-- **API docs**: http://localhost:8000/docs
-- **MLflow UI**: http://localhost:5000
+
+- **Plotly Dash:** `http://localhost:8050`
+- **FastAPI Docs:** `http://localhost:8000/docs`
+- **MLflow:** `http://localhost:5001`
+- **Streamlit:** `http://localhost:8501` if running
 
 ### 5. Test the API
+
 ```bash
-# Health check
+# Main API
 curl http://localhost:8000/health
 
-# List available sites
-curl http://localhost:8000/sites
+# ARIMAX production service
+curl http://localhost:8000/arimax/health
 
-# Forecast
-curl -X POST http://localhost:8000/forecast \
-  -H "Content-Type: application/json" \
-  -d '{
-    "site_id": "SITE_001",
-    "start_date": "2024-12-31",
-    "horizon": 8
-  }'
+# Model comparison
+curl http://localhost:8000/model-evaluation/summary
 ```
 
 ## Local Development (without Docker)
 
 ### Install dependencies
+
+From the project root:
+
 ```bash
-cd src
-pip install -r requirements.txt
+./cement-env/bin/python -m pip install -r src/requirements.txt
 ```
 
 ### Set environment variables
+
 ```bash
-export PYTHONPATH=/path/to/Cement-Demand-Forecasting/src
-export MLFLOW_TRACKING_URI=http://localhost:5000
+export PROJECT_ROOT="$PWD"
+export MLFLOW_TRACKING_URI=http://localhost:5001
 export MLFLOW_EXPERIMENT=cement_demand_forecasting
 ```
 
 ### Start MLflow locally
+
+Using Docker:
+
 ```bash
-mlflow server --host 0.0.0.0 --port 5000 \
-  --backend-store-uri sqlite:///mlflow/mlflow.db \
-  --default-artifact-root file:///mlflow/artifacts
+cd src
+docker compose up -d mlflow
 ```
 
 ### Train model
+
+From the project root:
+
 ```bash
-python -m src.pipeline \
+./cement-env/bin/python -m src.pipeline \
   --cutoff-date 2022-12-31 \
-  --output ../models/cement_demand_rf.pkl \
+  --output models/cement_demand_rf.pkl \
   --run-name "local-training"
 ```
 
 ### Run API
+
 ```bash
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+export PROJECT_ROOT="$PWD"
+
+./cement-env/bin/python -m uvicorn \
+  src.api.main:app \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --reload
 ```
 
 ### Run Dashboard
+
 ```bash
-streamlit run src/streamlit/app.py --server.port 8501
+./cement-env/bin/python src/dashboard/app.py
+```
+
+Dashboard:
+
+```text
+http://localhost:8050
 ```
 
 ## Project Structure
 
-```
+```text
 src/
 ├── api/
-│   └── main.py              # FastAPI app
-├── common/
-│   ├── config.py            # Centralized settings (env-based)
-│   ├── logging_config.py
-│   └── schemas.py           # Pydantic request/response models
+│   ├── main.py
+│   ├── arimax_routes.py
+│   └── model_evaluation_routes.py
+│
+├── dashboard/
+│   └── app.py
+│
 ├── streamlit/
-│   └── app.py               # Dashboard
-├── data_loader.py           # Load raw/processed CSV
-├── preprocessing.py         # Weekly agg, lag/rolling, targets
-├── inference.py             # ForecastService (from-date + recursive)
-├── pipeline.py              # Training CLI with MLflow
-├── requirements.txt
+│   └── app.py
+│
+├── common/
+│   ├── config.py
+│   ├── logging_config.py
+│   └── schemas.py
+│
+├── arimax_forecaster.py
+├── forecast_inventory_service.py
+├── inventory_optimizer.py
+├── inference.py
+├── pipeline.py
+├── preprocessing.py
+├── data_loader.py
+│
 ├── Dockerfile.api
 ├── Dockerfile.model
+├── Dockerfile.dash
 ├── Dockerfile.streamlit
 ├── docker-compose.yml
-└── .env.example
+└── requirements.txt
 ```
 
 ## Configuration
 
-All settings are in `src/common/config.py` and can be overridden via environment variables:
-
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PROJECT_ROOT` | `/app` | Root path inside container |
-| `DATA_PROCESSED` | `/app/data/processed` | Processed data directory |
-| `MODEL_DIR` | `/app/models` | Model artifact directory |
-| `MLFLOW_TRACKING_URI` | — | MLflow server URI |
-| `MLFLOW_EXPERIMENT` | `cement_demand_forecasting` | Experiment name |
-| `API_PORT` | `8000` | API port |
-| `DASHBOARD_PORT` | `8501` | Streamlit port |
-| `HORIZON` | `8` | Forecast horizon (weeks) |
+| `PROJECT_ROOT` | `/app` | Project root inside Docker |
+| `DATA_PROCESSED` | `/app/data/processed` | Processed data |
+| `MODEL_DIR` | `/app/models` | Model artifacts |
+| `MLFLOW_TRACKING_URI` | — | MLflow server |
+| `MLFLOW_EXPERIMENT` | `cement_demand_forecasting` | MLflow experiment |
+| `API_PORT` | `8000` | FastAPI port |
+| `DASH_PORT` | `8050` | Dash port |
+| `API_URL` | `http://api:8000` | API used by Dash |
+| `HORIZON` | `8` | Maximum forecast horizon |
 | `LOG_LEVEL` | `INFO` | Logging level |
 
 ## API Endpoints
 
+### Random Forest
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/health` | Service health + model loaded status |
-| `GET` | `/sites` | List available site IDs |
-| `POST` | `/forecast` | Generate forecast |
+| `GET` | `/health` | API / RF health |
+| `GET` | `/sites` | Site list |
+| `POST` | `/forecast` | Random Forest forecast |
 
-### Forecast Request
-```json
-{
-  "site_id": "SITE_001",
-  "start_date": "2024-12-31",
-  "horizon": 8,
-  "scenario": [
-    {"date": "2025-01-07", "planned_pour_tonnes": 100, "rain_mm": 5, "avg_temp_c": 22}
-  ],
-  "feature_overrides": {
-    "consumed_tonnes_lag_1": 95.5
-  }
-}
-```
+### ARIMAX Production
 
-### Forecast Response
-```json
-{
-  "site_id": "SITE_001",
-  "horizon": 8,
-  "forecasts": [
-    {"site_id": "SITE_001", "date": "2025-01-07T00:00:00", "forecast_consumed_tonnes": 98.3}
-  ],
-  "generated_at": "2025-01-01T12:00:00"
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/arimax/health` | ARIMAX health |
+| `GET` | `/arimax/sites` | Available sites |
+| `GET` | `/arimax/sites/{site_id}/config` | Site configuration |
+| `POST` | `/arimax/forecast-inventory` | Forecast + inventory recommendation |
+
+### Model Evaluation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/model-evaluation/summary` | ARIMAX vs Random Forest |
+| `GET` | `/model-evaluation/sites/{model_name}` | Site-level performance |
+| `GET` | `/model-evaluation/arimax/windows` | ARIMAX backtests |
+| `GET` | `/model-evaluation/arimax/site/{site_id}/window/{window}` | Actual vs forecast |
 
 ## MLflow Integration
 
-Each training run logs:
-- **Parameters**: cutoff_date, n_estimators, max_depth, random_state, horizon, train/test sizes, feature counts
-- **Metrics**: MAE/MAPE per horizon (t+1...t+8) + averages
-- **Model**: Full sklearn Pipeline with signature & input example
-- **Artifact**: Local `.pkl` file
+MLflow is used by the Random Forest training pipeline to record:
 
-View runs at http://localhost:5000
+- model parameters
+- MAE and MAPE
+- training configuration
+- model artifacts
 
-Load a model from MLflow:
-```python
-import mlflow
-model = mlflow.sklearn.load_model("runs:/<run_id>/model")
-```
+ARIMAX is deployed separately through the forecasting service.
 
 ## CI/CD Notes
 
-Each service has its own Dockerfile for independent builds:
-- `Dockerfile.model` — training job (run in CI pipeline)
-- `Dockerfile.api` — inference service (deploy to staging/prod)
-- `Dockerfile.streamlit` — dashboard (deploy to staging/prod)
+Each service has its own Dockerfile:
 
-Example GitHub Actions workflow:
-```yaml
-jobs:
-  train:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build model image
-        run: docker build -f src/Dockerfile.model -t cement-model .
-      - name: Run training
-        run: docker run --rm -v ${{ github.workspace }}/models:/app/models cement-model
+- `Dockerfile.model` — model training
+- `Dockerfile.api` — FastAPI
+- `Dockerfile.dash` — Plotly Dash
+- `Dockerfile.streamlit` — original Streamlit dashboard
 
-  build-api:
-    needs: train
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build API image
-        run: docker build -f src/Dockerfile.api -t cement-api .
-      - name: Push to registry
-        run: docker push myregistry/cement-api:${{ github.sha }}
-```
+Docker Compose is used to build and run the integrated application.
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| `Model not found` | Run `docker compose run --rm model` first |
-| `API returns 503` | Check `docker compose logs api` — model may not be loaded |
-| `MLflow connection refused` | Ensure `mlflow` service is healthy: `docker compose ps` |
-| `No sites in dropdown` | Verify data file exists at `../data/processed/operations_cleaned.csv` |
-| `Forecast fails` | Check API logs: `docker compose logs -f api` |
+| API unavailable | `docker compose logs api` |
+| Dash unavailable | `docker compose logs dash` |
+| Model evaluation unavailable | Check the `reports` volume |
+| Dataset unavailable | Check `../data/processed/operations_cleaned.csv` |
+| MLflow unavailable | `docker compose logs mlflow` |
+| Port 5000 conflict on macOS | Use local MLflow port `5001` |
 
 ## Data Requirements
 
-The system expects a CSV at `../data/processed/operations_cleaned.csv` with columns:
-- `date`, `site_id`, `consumed_tonnes`, `planned_pour_tonnes`
-- `rain_mm`, `avg_temp_c`, `silo_capacity`
-- `behavior`, `cement_type`, `region`
+The application expects:
 
-The preprocessing pipeline handles:
-- Daily → weekly aggregation per site
-- Lag features (1, 2, 4, 8 weeks)
-- Rolling means (4, 8 weeks)
-- Multi-step targets (t+1 ... t+8)
+```text
+../data/processed/operations_cleaned.csv
+```
+
+Important fields include:
+
+- `date`
+- `site_id`
+- `cement_type`
+- `planned_pour_tonnes`
+- `consumed_tonnes`
+- `opening_inventory_tonnes`
+- `deliveries_tonnes`
+- `closing_inventory_tonnes`
+- `rain_mm`
+- `avg_temp_c`
+- `silo_capacity`
+- `behavior`
+- `region`
+
+The production ARIMAX service aggregates the daily data into weekly site-level demand and forecasts up to 8 weeks ahead.

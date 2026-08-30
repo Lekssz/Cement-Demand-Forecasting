@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+# ---------------------------------------------------------
+# 1. INSTALL DEPENDENCIES
+# ---------------------------------------------------------
+COPY requirements.txt /app/requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+
+# ---------------------------------------------------------
+# 2. COPY PROJECT SOURCE CODE
+# ---------------------------------------------------------
+COPY . /app/src/
+
+
+# ---------------------------------------------------------
+# 3. EXPOSE DASH PORT
+# ---------------------------------------------------------
+EXPOSE 8050
+
+
+# ---------------------------------------------------------
+# 4. START DASHBOARD
+# ---------------------------------------------------------
+CMD ["python", "src/dashboard/app.py"]
